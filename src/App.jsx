@@ -98,6 +98,10 @@ function App() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [selectedBlocks, setSelectedBlocks] = useState([]);
   
+  // Quick Edit State
+  const [quickEditPrice, setQuickEditPrice] = useState({ blockId: null, tierIndex: null, isOpen: false });
+  const [tempPrice, setTempPrice] = useState('');
+  
   // Form State
   const [newBlock, setNewBlock] = useState({
     name: '',
@@ -193,6 +197,34 @@ function App() {
     setExpenseBlocks(expenseBlocks.map(block => 
       block.id === blockId ? { ...block, isActive: !block.isActive } : block
     ));
+  };
+
+  const handleQuickEditPrice = (blockId, tierIndex) => {
+    const block = expenseBlocks.find(b => b.id === blockId);
+    const currentPrice = block.pricingTiers[tierIndex].price;
+    setTempPrice(currentPrice.toString());
+    setQuickEditPrice({ blockId, tierIndex, isOpen: true });
+  };
+
+  const handleSaveQuickEdit = () => {
+    const newPrice = parseFloat(tempPrice);
+    if (!isNaN(newPrice) && newPrice >= 0) {
+      setExpenseBlocks(expenseBlocks.map(block => {
+        if (block.id === quickEditPrice.blockId) {
+          const updatedTiers = [...block.pricingTiers];
+          updatedTiers[quickEditPrice.tierIndex].price = newPrice;
+          return { ...block, pricingTiers: updatedTiers };
+        }
+        return block;
+      }));
+    }
+    setQuickEditPrice({ blockId: null, tierIndex: null, isOpen: false });
+    setTempPrice('');
+  };
+
+  const handleCancelQuickEdit = () => {
+    setQuickEditPrice({ blockId: null, tierIndex: null, isOpen: false });
+    setTempPrice('');
   };
 
   const addPricingTier = () => {
@@ -470,15 +502,60 @@ function App() {
                       </CardHeader>
                       <CardContent className="space-y-2">
                         {block.pricingTiers.map((tier, index) => (
-                          <div key={index} className="flex justify-between items-center">
+                          <div key={index} className="flex justify-between items-center group">
                             <span className="text-sm">{tier.range}:</span>
-                            <Button
-                              size="sm"
-                              onClick={() => addExpenseFromBlock(block, tier)}
-                              className="text-xs"
-                            >
-                              ₪{tier.price}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              {quickEditPrice.isOpen && quickEditPrice.blockId === block.id && quickEditPrice.tierIndex === index ? (
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    type="number"
+                                    value={tempPrice}
+                                    onChange={(e) => setTempPrice(e.target.value)}
+                                    className="w-20 h-8 text-xs"
+                                    placeholder="Price"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleSaveQuickEdit();
+                                      if (e.key === 'Escape') handleCancelQuickEdit();
+                                    }}
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={handleSaveQuickEdit}
+                                    className="h-8 px-2 text-xs"
+                                  >
+                                    <CheckCircle className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={handleCancelQuickEdit}
+                                    className="h-8 px-2 text-xs"
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              ) : (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => addExpenseFromBlock(block, tier)}
+                                    className="text-xs"
+                                  >
+                                    ₪{tier.price}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleQuickEditPrice(block.id, index)}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-xs p-1"
+                                    title="Edit price"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </CardContent>
