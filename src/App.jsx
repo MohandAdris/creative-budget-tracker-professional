@@ -98,6 +98,12 @@ function App() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [selectedBlocks, setSelectedBlocks] = useState([]);
   
+  // Quantity Selection State
+  const [isQuantityDialogOpen, setIsQuantityDialogOpen] = useState(false);
+  const [selectedBlock, setSelectedBlock] = useState(null);
+  const [selectedTier, setSelectedTier] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  
   // Quick Edit State
   const [quickEditPrice, setQuickEditPrice] = useState({ blockId: null, tierIndex: null, isOpen: false });
   const [tempPrice, setTempPrice] = useState('');
@@ -239,17 +245,35 @@ function App() {
     setNewBlock({ ...newBlock, pricingTiers: updatedTiers });
   };
 
+  const openQuantityDialog = (block, tier) => {
+    setSelectedBlock(block);
+    setSelectedTier(tier);
+    setQuantity(1);
+    setIsQuantityDialogOpen(true);
+  };
+
   const addExpenseFromBlock = (block, tier, quantity = 1) => {
     const expense = {
       id: Date.now(),
-      name: `${block.name} - ${tier.range}`,
+      name: `${block.name} - ${tier.range} (x${quantity})`,
       amount: tier.price * quantity,
       category: block.category,
       date: new Date().toISOString().split('T')[0],
       blockId: block.id,
-      tier: tier
+      tier: tier,
+      quantity: quantity
     };
     setExpenses([...expenses, expense]);
+  };
+
+  const handleAddExpenseWithQuantity = () => {
+    if (selectedBlock && selectedTier && quantity > 0) {
+      addExpenseFromBlock(selectedBlock, selectedTier, quantity);
+      setIsQuantityDialogOpen(false);
+      setSelectedBlock(null);
+      setSelectedTier(null);
+      setQuantity(1);
+    }
   };
 
   const addCustomExpense = () => {
@@ -539,7 +563,7 @@ function App() {
                                 <>
                                   <Button
                                     size="sm"
-                                    onClick={() => addExpenseFromBlock(block, tier)}
+                                    onClick={() => openQuantityDialog(block, tier)}
                                     className="text-xs"
                                   >
                                     ₪{tier.price}
@@ -1049,6 +1073,60 @@ function App() {
                 </Button>
                 <Button onClick={handleUpdateBlock}>
                   Update Block
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Quantity Selection Dialog */}
+        <Dialog open={isQuantityDialogOpen} onOpenChange={setIsQuantityDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Select Quantity</DialogTitle>
+              <DialogDescription>
+                How many {selectedTier?.range} do you want?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <h4 className="font-semibold">{selectedBlock?.name}</h4>
+                  <p className="text-sm text-gray-600">{selectedTier?.range}</p>
+                  <p className="text-sm font-medium">₪{selectedTier?.price} each</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantity</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  placeholder="Enter quantity"
+                />
+              </div>
+              
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Total Cost:</span>
+                  <span className="text-xl font-bold text-blue-600">
+                    ₪{selectedTier ? (selectedTier.price * quantity).toLocaleString() : 0}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">
+                  {quantity} × ₪{selectedTier?.price} = ₪{selectedTier ? (selectedTier.price * quantity).toLocaleString() : 0}
+                </p>
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsQuantityDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddExpenseWithQuantity}>
+                  Add to Expenses
                 </Button>
               </div>
             </div>
