@@ -563,7 +563,12 @@ function App() {
                                 <>
                                   <Button
                                     size="sm"
-                                    onClick={() => openQuantityDialog(block, tier)}
+                                    onClick={() => {
+                                      const qty = window.prompt(`How many ${tier.range} do you want?\n\nPrice: ₪${tier.price} each\n\nEnter quantity:`, '1');
+                                      if (qty && !isNaN(qty) && parseInt(qty) > 0) {
+                                        addExpenseFromBlock(block, tier, parseInt(qty));
+                                      }
+                                    }}
                                     className="text-xs"
                                   >
                                     ₪{tier.price}
